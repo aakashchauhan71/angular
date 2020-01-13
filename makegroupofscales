@@ -1,0 +1,39 @@
+  /**
+   * method to group parents and thier child scales
+   * @param scaleHierarchy : array of scaleHierarchy
+   */
+  makeGroupOfScales(scaleHierarchy: MappedScaleHierarchy[]): Observable<MappedScaleHierarchy[]> {
+    return from(scaleHierarchy).pipe( // identifying parents by selecting distinct scale from top-hierarchy-level
+      distinct((scaleHierarchyObj: MappedScaleHierarchy) => scaleHierarchyObj.guid),
+      toArray(),
+      map(competencyScalesParents => {
+        for (const scaleHierarchyObj of competencyScalesParents) {
+          const categoryData: MappedScaleHierarchy[] = scaleHierarchy.filter(scaleObj => {
+            // make a group by matching guid's
+            if (scaleObj.guid === scaleHierarchyObj.guid) {
+              return scaleObj.scalesHierarchies;
+            }
+          });
+
+          const newScaleHierarchyObj: MappedScaleHierarchy[] = [];
+          for (const scale of categoryData) {
+            // push sub-hierachey of each group element into new array
+            newScaleHierarchyObj.push(scale.scalesHierarchies[0]);
+          }
+          // assigning this new array to scalesHierarchies property of parent
+          // now the parent contains its all childs
+          scaleHierarchyObj.scalesHierarchies = newScaleHierarchyObj;
+          scaleHierarchyObj.scalesHierarchies = scaleHierarchyObj.scalesHierarchies.reduce(
+            // removing the scales having duplicate guids and keeping only one unique element
+            (scalesHierarchiesAccumulator, scalesHierarchiesCurrent) => {
+              if (scalesHierarchiesAccumulator.findIndex((scale: MappedScaleHierarchy) =>
+                scale.guid === scalesHierarchiesCurrent.guid) > -1) {
+                return scalesHierarchiesAccumulator;
+              } else {
+                return [...scalesHierarchiesAccumulator, scalesHierarchiesCurrent];
+              }
+            }, []);
+        }
+        return competencyScalesParents;
+      }));
+  }
